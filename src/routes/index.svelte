@@ -1,2 +1,89 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
+<script lang="ts">
+  import type { Movie } from "./../_types";
+
+  export let discoveryMovies: Array<Movie> | null = null;
+  let searchedMovies: Promise<Array<Movie>> | null = null;
+  let term: string | null = null;
+
+  const searchMovies = async ({ query }: { query: string }) => {
+    const { movies } = await (
+      await fetch(`/movies/search?query=${query}`)
+    ).json();
+    return movies;
+  };
+
+  $: {
+    if (typeof term === "string" && term.length > 0) {
+      searchedMovies = searchMovies({ query: term });
+    } else {
+      searchedMovies = null;
+    }
+  }
+
+  const inputChangeHandler: HTMLInputElement["oninput"] = (event) => {
+    // TODO: fix types
+    // @ts-ignore
+    term = event?.target?.["value"];
+  };
+</script>
+
+<svelte:head>
+  <title>Mangoovies | Svelte Edition</title>
+</svelte:head>
+
+<h1>Movies</h1>
+
+<form on:submit|preventDefault={() => {}}>
+  <label for="term">Search</label>
+  <input
+    on:input={inputChangeHandler}
+    class="border rounded"
+    type="text"
+    name="term"
+    id="term"
+  />
+</form>
+
+{#if term}
+  {#await searchedMovies then movies}
+    <h1>Searched movies</h1>
+    <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
+      {#each movies as movie (movie)}
+        <a href={`/movie/${movie.id}`}>
+          <article
+            class="border p-2 rounded-lg shadow-md flex flex-col max-w-[15rem]"
+          >
+            <img
+              class="rounded"
+              src={movie.poster_path}
+              alt={movie.title}
+              title={movie.title}
+            />
+            <h2>{movie.title}</h2>
+          </article>
+        </a>
+      {/each}
+    </section>
+  {/await}
+{:else if discoveryMovies !== null}
+  <h1>Discovery movies</h1>
+  <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
+    {#each discoveryMovies as movie (movie)}
+      <a href={`/movie/${movie.id}`}>
+        <article
+          class="border p-2 rounded-lg shadow-md flex flex-col max-w-[15rem]"
+        >
+          <img
+            class="rounded"
+            src={movie.backdrop_path}
+            alt={movie.title}
+            title={movie.title}
+          />
+          <h2>{movie.title}</h2>
+        </article>
+      </a>
+    {/each}
+  </section>
+{:else}
+  <p>No movies</p>
+{/if}
