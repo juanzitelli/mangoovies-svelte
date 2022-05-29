@@ -1,16 +1,27 @@
 <script lang="ts">
+  import Rating from "../components/Rating.svelte";
+
   import type { Movie } from "./../_types";
 
   export let discoveryMovies: Array<Movie> | null = null;
   let searchedMovies: Promise<Array<Movie>> | null = null;
   let term: string | null = null;
+  let selectedRating: number | null = null;
 
   const searchMovies = async ({ query }: { query: string }) => {
     const { movies } = await (
       await fetch(`/movies/search?query=${query}`)
     ).json();
+
     return movies;
   };
+
+  const onRatingSelectHandler = (rating: number | null) =>
+    (selectedRating = rating);
+
+  const inputChangeHandler: HTMLInputElement["oninput"] = (event) =>
+    //@ts-ignore I'll need to figure out what's the correct typing for inputs
+    (term = event?.target?.["value"]);
 
   $: {
     if (typeof term === "string" && term.length > 0) {
@@ -19,12 +30,6 @@
       searchedMovies = null;
     }
   }
-
-  const inputChangeHandler: HTMLInputElement["oninput"] = (event) => {
-    // TODO: fix types
-    // @ts-ignore
-    term = event?.target?.["value"];
-  };
 </script>
 
 <svelte:head>
@@ -47,22 +52,44 @@
 {#if term}
   {#await searchedMovies then movies}
     <h1>Searched movies</h1>
+    <Rating onSelectRating={onRatingSelectHandler} />
     <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
-      {#each movies as movie (movie)}
-        <a href={`/movie/${movie.id}`}>
-          <article
-            class="border p-2 rounded-lg shadow-md flex flex-col max-w-[15rem]"
-          >
-            <img
-              class="rounded"
-              src={movie.poster_path}
-              alt={movie.title}
-              title={movie.title}
-            />
-            <h2>{movie.title}</h2>
-          </article>
-        </a>
-      {/each}
+      {#if movies}
+        {#each movies as movie (movie)}
+          {#if selectedRating !== null}
+            {#if movie.vote_average > selectedRating - 2 && movie.vote_average <= selectedRating}
+              <a href={`/movie/${movie.id}`}>
+                <article
+                  class="border p-2 rounded-lg shadow-md flex flex-col max-w-[15rem]"
+                >
+                  <img
+                    class="rounded"
+                    src={movie.poster_path}
+                    alt={movie.title}
+                    title={movie.title}
+                  />
+                  <h2>{movie.title}</h2>
+                  <h3>Vote average: {movie.vote_average}</h3>
+                </article>
+              </a>{/if}
+          {:else}
+            <a href={`/movie/${movie.id}`}>
+              <article
+                class="border p-2 rounded-lg shadow-md flex flex-col max-w-[15rem]"
+              >
+                <img
+                  class="rounded"
+                  src={movie.poster_path}
+                  alt={movie.title}
+                  title={movie.title}
+                />
+                <h2>{movie.title}</h2>
+                <h3>Vote average: {movie.vote_average}</h3>
+              </article>
+            </a>
+          {/if}
+        {/each}
+      {/if}
     </section>
   {/await}
 {:else if discoveryMovies !== null}
